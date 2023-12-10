@@ -1,16 +1,16 @@
 <?php
-require_once("tools/CLI.php");
+require_once("tools/Cli.php");
 
-use App\CLI;
+use App\Cli;
 
-CLI::clear();
+Cli::clear();
 unserialize_data($argv);
 
 function unserialize_data($arguments)
 {
     // check arguments
     if (count($arguments) < 4) {
-        CLI::print_error("Command invalid!");
+        Cli::print_error("Command invalid!");
         print("\nfilename.php [table name] [field name] [unserialize field count]\n");
         print("\n");
         die();
@@ -24,10 +24,10 @@ function unserialize_data($arguments)
     try {
         $db_connection = mysqli_connect(APP_CONFIG["database"]['host'], APP_CONFIG["database"]['username'], APP_CONFIG["database"]['password'], APP_CONFIG["database"]['name']);
     } catch (Exception $error) {
-        CLI::print_error("Database Connection Failed!");
+        Cli::print_error("Database Connection Failed!");
         die();
     }
-    CLI::print_success("Connected.");
+    Cli::print_success("Connected.");
     sleep(1);
 
     // check table
@@ -36,14 +36,14 @@ function unserialize_data($arguments)
     $result = mysqli_fetch_all(mysqli_query($db_connection, "SHOW TABLES LIKE '" . $arguments[1] . "';"));
     try {
         if (count($result) == 0) {
-            CLI::print_error("Table not found!");
+            Cli::print_error("Table not found!");
             die();
         }
     } catch (Exception $error) {
-        CLI::print_error("Table found error!");
+        Cli::print_error("Table found error!");
         die();
     }
-    CLI::print_success("Table founded.");
+    Cli::print_success("Table founded.");
     sleep(1);
 
     //check table field
@@ -58,10 +58,10 @@ function unserialize_data($arguments)
         }
     }
     if (!$is_field_exist) {
-        CLI::print_error("Field not exist on `" . $arguments[1] . "` table.");
+        Cli::print_error("Field not exist on `" . $arguments[1] . "` table.");
         die();
     }
-    CLI::print_success("Field exists.");
+    Cli::print_success("Field exists.");
     sleep(1);
 
     // Proccssing
@@ -89,7 +89,7 @@ function unserialize_data($arguments)
         global $now_data;
         if ($errno === E_NOTICE) {
             $error_count++;
-            CLI::print_error("#" . $error_count . " | " . $now_data[2] . " => " . $now_data[3] . "\n");
+            Cli::print_error("#" . $error_count . " | " . $now_data[2] . " => " . $now_data[3] . "\n");
             print("-----------\n");
             return true; // Suppress the notice
         }
@@ -117,7 +117,7 @@ function unserialize_data($arguments)
     restore_error_handler();
 
     print("\n-----------------------------\n");
-    CLI::print_success("Finish processing.");
+    Cli::print_success("Finish processing.");
     print("error count: " . $error_count . "\n");
     die();
 }
