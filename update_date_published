@@ -11,16 +11,37 @@ function execute($arguments)
     /* variables */
     $db_info = [];
     $db_connection = [];
+    $publications = [];
     // remove file name from args
     $arguments = RemoveFileNameFromArguments($arguments);
-    if (in_array("--help", $arguments))
+    if (in_array("--help", $arguments)) {
         PrintHelp();
+        die;
+    }
     $db_info = GetDataBaseParams($arguments);
     $db_connection = [
-        "3.1" => mysqli_connect($db_info["3.1"]["host"], $db_info["3.1"]["username"], $db_info["3.1"]["password"]),
-        "3.3" => mysqli_connect($db_info["3.1"]["host"], $db_info["3.1"]["username"], $db_info["3.1"]["password"])
+        "3.1" => mysqli_connect($db_info["3.1"]["host"], $db_info["3.1"]["username"], $db_info["3.1"]["password"], $db_info["3.1"]["name"]),
+        "3.3" => mysqli_connect($db_info["3.3"]["host"], $db_info["3.3"]["username"], $db_info["3.3"]["password"], $db_info["3.3"]["name"])
     ];
-    
+    $publications = mysqli_fetch_all(mysqli_query($db_connection["3.3"], "SELECT * FROM `publications` WHERE `status`=3"));
+    $counter = 1;
+    foreach ($publications as $key => $value) {
+        $query = mysqli_query($db_connection["3.1"], "SELECT * FROM `published_submissions` WHERE `submission_id`=" . $value[8]);
+        if ($query == false) {
+            continue;
+        }
+        $published_date = mysqli_fetch_row($query)[3];
+        $query = mysqli_query($db_connection["3.3"], "UPDATE `publications` SET `date_published`='" . $published_date . "' WHERE `submission_id`=" . $value[8]);
+        if ($query == false) {
+            Cli::print_error("Update Failed\n");
+            die;
+        }
+        Cli::print_success("Submission #" . $value[8] . " published_date updated!");
+        $counter++;
+    }
+    Cli::print("\n");
+    Cli::print("\n");
+    Cli::print_success("Update " . $counter . " submission dates successfully!\n");
 }
 
 /**
@@ -68,14 +89,19 @@ function PrintHelp()
  */
 function GetDataBaseParams($arguments)
 {
-    for ($i = 1; $i < 3; $i++) {
-        $temp = explode(":", $arguments[1]);
-        $template["3." . $i] = [
-            "name" => $temp[0],
-            "username" => $temp[1],
-            "password" => $temp[2],
-            "host" => $temp[3],
-        ];
-    }
+    $temp = explode(":", $arguments[1]);
+    $template["3.1"] = [
+        "name" => $temp[0],
+        "username" => $temp[1],
+        "password" => $temp[2],
+        "host" => $temp[3],
+    ];
+    $temp = explode(":", $arguments[2]);
+    $template["3.3"] = [
+        "name" => $temp[0],
+        "username" => $temp[1],
+        "password" => $temp[2],
+        "host" => $temp[3],
+    ];
     return $template;
 }
