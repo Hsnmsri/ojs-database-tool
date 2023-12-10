@@ -2,7 +2,7 @@
 
 namespace App;
 
-class CLI
+class Cli
 {
 
     /**
@@ -38,5 +38,20 @@ class CLI
     public static function print_success($text)
     {
         print("\033[0;32m" . $text . "\033[0m\n");
+    }
+
+    /**
+     * Prints the given text followed by a newline character.
+     *
+     * This method is designed to print text to the standard output with a newline
+     * character appended, making it suitable for simple output in a console environment.
+     *
+     * @param string $text The text to be printed.
+     *
+     * @return void
+     */
+    public static function print($text)
+    {
+        print($text . "\n");
     }
 }
