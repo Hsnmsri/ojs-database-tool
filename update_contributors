@@ -111,6 +111,18 @@ function GetDataBaseParams($arguments)
     return $template;
 }
 
+/**
+ * Remove admin authors and corresponding author settings for a given list of submission IDs.
+ *
+ * This function deletes records from the `authors` and `author_settings` tables
+ * in the OJS 3.3 database where the `setting_value` in `author_settings` is set to "admin"
+ * and the associated submission IDs match the provided list.
+ *
+ * @param array $submission_id_list An array containing submission IDs for which admin authors and settings will be removed.
+ * @param array $db_connection An associative array containing database connections for OJS 3.3.
+ *
+ * @return void
+ */
 function RemoveAdminAuthors($submission_id_list, $db_connection)
 {
     Cli::print("\n Delete admin authors & author_settings\n");
