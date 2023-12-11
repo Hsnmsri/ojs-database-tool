@@ -34,6 +34,8 @@ function execute($arguments)
     // Step 2 - update authors email
     UpdateAuthorsEmail($submission_id_list, $db_connection);
 
+    // Step 3 - Update author settings
+    UpdateAuthorsData($submission_id_list, $db_connection);
 }
 
 /**
@@ -174,4 +176,74 @@ function UpdateAuthorsEmail($submission_id_list, $db_connection)
         }
     }
     Cli::print_success("Update author email successfully!\n");
+}
+
+function UpdateAuthorsData($submission_id_list, $db_connection)
+{
+    Cli::print("\n Update authors data \n");
+    foreach ($submission_id_list as $key => $value) {
+        // get author list
+        $get_author_list_query = mysqli_query($db_connection["3.3"], "SELECT * FROM `authors` WHERE `publication_id`=" . $value[0]);
+        $get_last_author_list_query = mysqli_query($db_connection["3.1"], "SELECT * FROM `authors` WHERE `submission_id`=" . $value[0]);
+        if ($get_author_list_query == false || mysqli_num_rows($get_author_list_query) == 0) {
+            continue;
+        }
+        $new_author_list = mysqli_fetch_all($get_author_list_query);
+        $last_author_list = mysqli_fetch_all($get_last_author_list_query);
+
+        foreach ($new_author_list as $new_author_key => $new_author_value) {
+
+            $get_new_author_setting_list = mysqli_query($db_connection["3.3"], "SELECT * FROM `author_settings` WHERE `author_id`=" . $new_author_value[0]);
+            $get_last_author_setting_list = mysqli_query($db_connection["3.1"], "SELECT * FROM `author_settings` WHERE `author_id`=" . $last_author_list[$new_author_key][0]);
+            if ($get_new_author_setting_list == false || mysqli_num_rows($get_new_author_setting_list) == 0) {
+                continue;
+            }
+
+            $get_new_author_setting_list_data = mysqli_fetch_all($get_new_author_setting_list);
+            $get_last_author_setting_list_data = mysqli_fetch_all($get_last_author_setting_list);
+
+            foreach ($get_new_author_setting_list_data as $get_new_author_setting_list_data_key => $get_new_author_setting_list_data_value) {
+
+                if ($get_new_author_setting_list_data_value[2] == "affiliation") {
+                    foreach ($get_last_author_setting_list_data as $aff_key => $aff_value) {
+                        if ($aff_value[2] == "affiliation") {
+                            mysqli_query($db_connection["3.3"], "UPDATE `author_settings` SET `setting_value`='" . $aff_value[3] . "' WHERE `setting_name`='affiliation' AND `author_id`=" . $get_new_author_setting_list_data_value[0]);
+                            Cli::print_success("Record (author_id) #" . $get_new_author_setting_list_data_value[0] . " affiliation updated successfully!");
+                        }
+                    }
+                }
+
+                if ($get_new_author_setting_list_data_value[2] == "biography") {
+                    foreach ($get_last_author_setting_list_data as $aff_key => $aff_value) {
+                        if ($aff_value[2] == "biography") {
+                            mysqli_query($db_connection["3.3"], "UPDATE `author_settings` SET `setting_value`='" . $aff_value[3] . "' WHERE `setting_name`='biography' AND `author_id`=" . $get_new_author_setting_list_data_value[0]);
+                            Cli::print_success("Record (author_id) #" . $get_new_author_setting_list_data_value[0] . " biography updated successfully!");
+                        }
+                    }
+                }
+
+                if ($get_new_author_setting_list_data_value[2] == "familyName") {
+                    foreach ($get_last_author_setting_list_data as $aff_key => $aff_value) {
+                        if ($aff_value[2] == "familyName") {
+                            mysqli_query($db_connection["3.3"], "UPDATE `author_settings` SET `setting_value`='" . $aff_value[3] . "' WHERE `setting_name`='familyName' AND `author_id`=" . $get_new_author_setting_list_data_value[0]);
+                            Cli::print_success("Record (author_id) #" . $get_new_author_setting_list_data_value[0] . " familyName updated successfully!");
+                        }
+                    }
+                }
+
+                if ($get_new_author_setting_list_data_value[2] == "givenName") {
+                    foreach ($get_last_author_setting_list_data as $aff_key => $aff_value) {
+                        if ($aff_value[2] == "givenName") {
+                            mysqli_query($db_connection["3.3"], "UPDATE `author_settings` SET `setting_value`='" . $aff_value[3] . "' WHERE `setting_name`='givenName' AND `author_id`=" . $get_new_author_setting_list_data_value[0]);
+                            Cli::print_success("Record (author_id) #" . $get_new_author_setting_list_data_value[0] . " givenName updated successfully!");
+                        }
+                    }
+                }
+
+            }
+
+        }
+
+    }
+    Cli::print_success("Update author data successfully!\n");
 }
