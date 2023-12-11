@@ -30,23 +30,10 @@ function execute($arguments)
 
     // Step 1 - Remove admin admin contributors from authors
     RemoveAdminAuthors($submission_id_list, $db_connection);
-    die;
-    // Step 2 - 
 
-    foreach ($submission_id_list as $key => $value) {
-        // load submission authors
-        $query = mysqli_query($db_connection["3.3"], "SELECT publication_id,author_id FROM `authors` WHERE `publication_id`=" . $value[0]);
-        if ($query == false) {
-            continue;
-        }
-        $submission_authors = mysqli_fetch_all($query);
-        foreach ($submission_authors as $author_key => $author_value) {
-            $author_data = mysqli_fetch_row(mysqli_query($db_connection["3.1"], "SELECT * FROM `authors` WHERE `"));
-            var_dump($author_data);
-            // Cli::print($author_data);
-            // $author_email_query = mysqli_query($db_connection["3.3"], "UPDATE `authors` SET `author_id`='[value-1]' WHERE `email`=''");
-        }
-    }
+    // Step 2 - update authors email
+    UpdateAuthorsEmail($submission_id_list, $db_connection);
+
 }
 
 /**
@@ -154,4 +141,37 @@ function RemoveAdminAuthors($submission_id_list, $db_connection)
         }
     }
     Cli::print_success("Clean author_settings successfully!\n");
+}
+
+/**
+ * Update authors' email addresses for a given list of submission IDs.
+ *
+ * This function retrieves the author list for each submission ID from the OJS 3.3 database,
+ * as well as the corresponding author list from the OJS 3.1 database based on submission ID.
+ * It then updates the email addresses of authors in the OJS 3.3 database with the email addresses
+ * from the OJS 3.1 database, assuming the structure matches.
+ *
+ * @param array $submission_id_list An array containing submission IDs for which authors' email addresses will be updated.
+ * @param array $db_connection An associative array containing database connections for OJS 3.3 and OJS 3.1.
+ *
+ * @return void
+ */
+function UpdateAuthorsEmail($submission_id_list, $db_connection)
+{
+    Cli::print("\n Update authors email \n");
+    foreach ($submission_id_list as $key => $value) {
+        $get_author_list_query = mysqli_query($db_connection["3.3"], "SELECT * FROM `authors` WHERE `publication_id`=" . $value[0]);
+        if ($get_author_list_query == false || mysqli_num_rows($get_author_list_query) == 0) {
+            continue;
+        }
+        $get_last_author_list_query = mysqli_query($db_connection["3.1"], "SELECT * FROM `authors` WHERE `submission_id`=" . $value[0]);
+        $new_author_list = mysqli_fetch_all($get_author_list_query);
+        $last_author_list = mysqli_fetch_all($get_last_author_list_query);
+
+        foreach ($new_author_list as $new_author_key => $new_author_value) {
+            mysqli_query($db_connection["3.3"], "UPDATE `authors` SET `email`='" . $last_author_list[$new_author_key][5] . "' WHERE `author_id`=" . $new_author_value[0]);
+            Cli::print_success("Record (author_id) #" . $new_author_value[0] . " Email updated successfully!");
+        }
+    }
+    Cli::print_success("Update author email successfully!\n");
 }
