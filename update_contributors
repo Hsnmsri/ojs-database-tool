@@ -114,7 +114,7 @@ function GetDataBaseParams($arguments)
 function RemoveAdminAuthors($submission_id_list, $db_connection)
 {
     Cli::print("\n Delete admin authors & author_settings\n");
-    
+
     // get all data from author_settings with setting_value = "admin"
     $get_all_author_setting = mysqli_fetch_all(mysqli_query($db_connection["3.3"], "SELECT * FROM `author_settings` WHERE `setting_value`='admin'"));
 
@@ -128,8 +128,9 @@ function RemoveAdminAuthors($submission_id_list, $db_connection)
         mysqli_query($db_connection["3.3"], "DELETE FROM `authors` WHERE `author_id`=" . $auth_value[0]);
         Cli::print_success("reocrd (author_id)#" . $auth_value[0] . " successfully deleted.");
     }
+    Cli::print_success("Clean authors successfully!");
 
-    Cli::print("Clean author_settings");
+    Cli::print("\nClean author_settings");
     // delete author settings
     foreach ($get_all_author_setting as $author_setting_key => $author_setting_value) {
         $author_setting_all_data = mysqli_fetch_all(mysqli_query($db_connection["3.3"], "SELECT * FROM `author_settings` WHERE `author_id`=" . $author_setting_value[0]));
@@ -140,4 +141,5 @@ function RemoveAdminAuthors($submission_id_list, $db_connection)
             Cli::print_success("reocrd (author_id)#" . $author_setting_all_data_value[0] . " successfully deleted.");
         }
     }
+    Cli::print_success("Clean author_settings successfully!\n");
 }
