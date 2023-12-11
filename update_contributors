@@ -178,6 +178,19 @@ function UpdateAuthorsEmail($submission_id_list, $db_connection)
     Cli::print_success("Update author email successfully!\n");
 }
 
+/**
+ * Update authors' data, including affiliation, biography, familyName, and givenName,
+ * for a given list of submission IDs.
+ *
+ * This function retrieves the author list and corresponding author settings for each submission ID
+ * from both the OJS 3.3 and OJS 3.1 databases. It then updates the relevant author settings in
+ * the OJS 3.3 database with the corresponding values from the OJS 3.1 database, assuming the structure matches.
+ *
+ * @param array $submission_id_list An array containing submission IDs for which authors' data will be updated.
+ * @param array $db_connection An associative array containing database connections for OJS 3.3 and OJS 3.1.
+ *
+ * @return void
+ */
 function UpdateAuthorsData($submission_id_list, $db_connection)
 {
     Cli::print("\n Update authors data \n");
