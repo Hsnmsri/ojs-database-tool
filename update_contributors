@@ -36,6 +36,9 @@ function execute($arguments)
 
     // Step 3 - Update author settings
     UpdateAuthorsData($submission_id_list, $db_connection);
+
+    // Step 4 - Order
+    UpdateMainContent($submission_id_list, $db_connection);
 }
 
 /**
@@ -259,4 +262,55 @@ function UpdateAuthorsData($submission_id_list, $db_connection)
 
     }
     Cli::print_success("Update author data successfully!\n");
+}
+
+/**
+ * Update main content data for authors in a given list of submission IDs.
+ *
+ * This function retrieves the authors' data from the OJS 3.1 database based on submission ID,
+ * and for each author with a role ID of 1, it finds a matching author in the OJS 3.3 database based on
+ * familyName and givenName. If a match is found, it updates the `primary_contact_id` in the `publications` table
+ * in the OJS 3.3 database.
+ *
+ * @param array $submission_id_list An array containing submission IDs for which main content data will be updated.
+ * @param array $db_connection An associative array containing database connections for OJS 3.3 and OJS 3.1.
+ *
+ * @return void
+ */
+function UpdateMainContent($submission_id_list, $db_connection)
+{
+    Cli::print("\n Update author contents data \n");
+    foreach ($submission_id_list as $key => $value) {
+        // get author list
+        $get_author_query = mysqli_query($db_connection["3.1"], "SELECT * FROM `authors` WHERE `submission_id`=" . $value[0]);
+        if ($get_author_query == false || mysqli_num_rows($get_author_query) == 0) {
+            continue;
+        }
+        $author_list = mysqli_fetch_all($get_author_query);
+        foreach ($author_list as $author_key => $author_value) {
+            if ($author_value[2] == 1) {
+                $author_familyName = mysqli_fetch_all(mysqli_query($db_connection["3.1"], "SELECT * FROM `author_settings` WHERE `setting_name`='familyName' AND `author_id`=" . $author_value[0]))[0][3];
+                $author_givenName = mysqli_fetch_all(mysqli_query($db_connection["3.1"], "SELECT * FROM `author_settings` WHERE `setting_name`='givenName' AND `author_id`=" . $author_value[0]))[0][3];
+
+                $new_author_list_query = mysqli_query($db_connection["3.3"], "SELECT * FROM `authors` WHERE `publication_id`=" . $value[0]);
+                if ($new_author_list_query == false || mysqli_num_rows($new_author_list_query) == 0) {
+                    continue;
+                }
+                $new_author_list = mysqli_fetch_all($new_author_list_query);
+
+                foreach ($new_author_list as $new_authors_key => $new_authors_value) {
+
+                    $new_author_familyName = mysqli_fetch_all(mysqli_query($db_connection["3.3"], "SELECT setting_value FROM `author_settings` WHERE `setting_name`='familyName' AND `author_id`=" . $new_authors_value[0]))[0][0];
+                    $new_author_givenName = mysqli_fetch_all(mysqli_query($db_connection["3.3"], "SELECT setting_value FROM `author_settings` WHERE `setting_name`='givenName' AND `author_id`=" . $new_authors_value[0]))[0][0];
+
+                    if ($new_author_familyName == $author_familyName && $new_author_givenName == $author_givenName) {
+                        mysqli_query($db_connection["3.3"], "UPDATE `publications` SET `primary_contact_id` = " . $new_authors_value[0] . " WHERE `submission_id`=" . $value[0]);
+                        Cli::print_success("Author #" . $new_authors_value[0] . " successfully!");
+                    }
+
+                }
+            }
+        }
+    }
+    Cli::print_success("Update author contents successfully!\n");
 }
