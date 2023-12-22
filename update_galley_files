@@ -1,0 +1,180 @@
+#!/usr/bin/env php
+<?php
+require_once("./tools/Cli.php");
+
+use App\Cli;
+
+execute($argv);
+
+function execute($arguments)
+{
+    /* variables */
+    $db_info = [];
+    $db_connection = [];
+    // remove file name from args
+    $arguments = RemoveFileNameFromArguments($arguments);
+
+    if (in_array("--help", $arguments)) {
+        PrintHelp();
+        die;
+    }
+
+    $db_info = GetDataBaseParams($arguments);
+    $db_connection = [
+        "3.1" => mysqli_connect($db_info["3.1"]["host"], $db_info["3.1"]["username"], $db_info["3.1"]["password"], $db_info["3.1"]["name"]),
+        "3.3" => mysqli_connect($db_info["3.3"]["host"], $db_info["3.3"]["username"], $db_info["3.3"]["password"], $db_info["3.3"]["name"])
+    ];
+
+    // load 3.3 submission files list
+    $submission_files = mysqli_fetch_all(mysqli_query($db_connection['3.1'], "SELECT * FROM `submission_files` WHERE `file_stage`=10"));
+
+    // step-1 create files
+    // UpdateFiles($submission_files, $db_connection);
+
+    // step-2 create submission_files
+    // CreateSubmissionFiles($submission_files, $db_connection);
+
+    // step-3 create submission_file_settings
+    CreateSubmissionFileSettings($db_connection);
+}
+
+/**
+ * Removes the current file name from the provided array of arguments.
+ *
+ * This function iterates through the array of arguments and removes any
+ * element that has the same value as the base name of the current file.
+ *
+ * @param array $arguments The array of arguments to process.
+ *
+ * @return array The updated array with the current file name removed.
+ */
+function RemoveFileNameFromArguments($arguments)
+{
+    foreach ($arguments as $key => $value) {
+        if ($value === basename(__FILE__)) {
+            unset($arguments[$key]);
+        }
+    }
+    return $arguments;
+}
+
+/**
+ * Prints help information for the CLI application.
+ *
+ * This function prints a help message describing the usage of the CLI application,
+ * including the expected command-line arguments.
+ *
+ * Example:
+ *   php script.php filename [ojs-3.1 database name] [ojs-3.3 database name]
+ *
+ * @return void
+ */
+function PrintHelp()
+{
+    Cli::print("\nhelp : filename [ojs-3.1 database name]:[username]:[password]:[host] [ojs-3.3 database name]:[username]:[password]:[host]\n");
+}
+
+/**
+ * Parses command line arguments to extract database parameters.
+ *
+ * @param array $arguments The array of command line arguments.
+ *
+ * @return array Associative array containing database parameters for OJS 3.1 and OJS 3.3.
+ */
+function GetDataBaseParams($arguments)
+{
+    $temp = explode(":", $arguments[1]);
+    $template["3.1"] = [
+        "name" => $temp[0],
+        "username" => $temp[1],
+        "password" => $temp[2],
+        "host" => $temp[3],
+    ];
+    $temp = explode(":", $arguments[2]);
+    $template["3.3"] = [
+        "name" => $temp[0],
+        "username" => $temp[1],
+        "password" => $temp[2],
+        "host" => $temp[3],
+    ];
+    return $template;
+}
+
+function UpdateFiles($submission_files, $db_connection)
+{
+    Cli::print("\n start Create Files record \n");
+    foreach ($submission_files as $key => $value) {
+        # generate filename
+        $file_name = "$value[4]-$value[13]-$value[0]-$value[1]-$value[8]-" . (new DateTime($value[10]))->format("Ymd") . "." . pathinfo($value[7])['extension'];
+        # generate file path
+        $file_path = "journals/1/articles/" . $value[4] . "/submission/proof/" . $file_name;
+        # create record
+        if ((mysqli_query($db_connection["3.3"], "SELECT * FROM `files` WHERE `file_id`=" . $value[0]) == false) || mysqli_num_rows(mysqli_query($db_connection["3.3"], "SELECT * FROM `files` WHERE `file_id`=" . $value[0])) == 0) {
+            mysqli_query($db_connection["3.3"], "INSERT INTO `files`(`file_id`, `path`, `mimetype`) VALUES ('" . $value[0] . "','" . $file_path . "','" . $value[5] . "');");
+            Cli::print_success("File #" . $value[0] . " create successfully!");
+        } else {
+            mysqli_query($db_connection["3.3"], "UPDATE `files` SET `path`='" . $file_path . "',`mimetype`='" . $value[5] . "' WHERE `file_id`=" . $value[0]);
+            Cli::print_success("File #" . $value[0] . " update successfully!");
+        }
+    }
+    Cli::print_success("Create Files record successfully!\n");
+}
+
+function CreateSubmissionFiles($submission_files, $db_connection)
+{
+    Cli::print("\n Create submission files record \n");
+    foreach ($submission_files as $key => $value) {
+        if ((mysqli_query($db_connection["3.3"], "SELECT * FROM `submission_files` WHERE `submission_file_id`=" . $value[0]) == false) || mysqli_num_rows(mysqli_query($db_connection["3.3"], "SELECT * FROM `submission_files` WHERE `submission_file_id`=" . $value[0])) == 0) {
+            mysqli_query(
+                $db_connection["3.3"],
+                "INSERT INTO `submission_files`
+                (`submission_file_id`, `submission_id`, `file_id`, `source_submission_file_id`, `genre_id`, `file_stage`, `direct_sales_price`, `sales_type`, `viewable`, `created_at`, `updated_at`, `uploader_user_id`, `assoc_type`, `assoc_id`) 
+                VALUES 
+                ('" . $value[0] . "','" . $value[4] . "','" . $value[0] . "','" . $value[3] . "','" . $value[13] . "','" . $value[8] . "','" . $value[14] . "','" . $value[15] . "','" . $value[9] . "','" . $value[10] . "','" . $value[10] . "','" . $value[16] . "','" . $value[17] . "','" . $value[13] . "')"
+            );
+
+            Cli::print_success("Record #" . $value[0] . " created successfully!");
+        } else {
+            mysqli_query(
+                $db_connection["3.3"],
+                "UPDATE `submission_files` SET 
+                `submission_id`='" . $value[4] . "',
+                `file_id`='" . $value[0] . "',
+                `source_submission_file_id`='" . $value[3] . "',
+                `genre_id`='" . $value[13] . "',
+                `file_stage`='" . $value[8] . "',
+                `direct_sales_price`='" . $value[14] . "',
+                `sales_type`='" . $value[15] . "',
+                `viewable`='" . $value[9] . "',
+                `created_at`='" . $value[10] . "',
+                `updated_at`='" . $value[10] . "',
+                `uploader_user_id`='" . $value[16] . "',
+                `assoc_type`='" . $value[17] . "',
+                `assoc_id`='" . $value[13] . "' 
+                WHERE `submission_file_id`=" . $value[0]
+            );
+
+            Cli::print_success("Record #" . $value[0] . " update successfully!");
+        }
+    }
+    Cli::print_success("Create submission files record successfully!\n");
+}
+
+function CreateSubmissionFileSettings($db_connection)
+{
+    Cli::print("\n Create submission file secttings record \n");
+    $setting_data = mysqli_fetch_all(mysqli_query($db_connection["3.1"], "SELECT * FROM `submission_file_settings` WHERE `setting_name`='name'"));
+    foreach ($setting_data as $key => $value) {
+        try {
+            mysqli_query(
+                $db_connection["3.3"],
+                "INSERT INTO 
+            `submission_file_settings`(`submission_file_id`, `locale`, `setting_name`, `setting_value`, `setting_type`) VALUES ('" . $value[0] . "','" . $value[1] . "','" . $value[2] . "','" . str_replace("'", "", $value[3]) . "','" . $value[4] . "')"
+            );
+            Cli::print_success("Record #" . $value[0] . " create on settings!");
+        } catch (Exception $error) {
+            Cli::print_error($error);
+        }
+    }
+    Cli::print_success("Create submission file secttings record successfully!\n");
+}
